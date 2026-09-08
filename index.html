@@ -1,0 +1,1126 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3매치 분수 시뮬레이터 V2</title>
+<style>
+body{margin:0;font-family:Arial,sans-serif;background:#f5f7fb;color:#222}
+.app{display:grid;grid-template-columns:280px 1fr 320px;min-height:100vh}
+aside{background:white;padding:16px;border-right:1px solid #ddd}
+.right{border-right:0;border-left:1px solid #ddd}
+main{padding:18px;overflow:auto}
+h1{font-size:20px}h2{font-size:15px;margin-top:20px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+button,select,input{padding:8px;border:1px solid #ccc;border-radius:8px;background:white}
+button{cursor:pointer}button:disabled{opacity:.4}
+.primary{background:#3b82f6;color:white}.warn{background:#f59e0b;color:white}.ok{background:#16a34a;color:white}
+.palette{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tool{height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;cursor:pointer}
+.tool.lotus{background:#e8f7ec;color:#176b3a;border:1px solid #9bd7ac;font-size:12px}
+.special-line-v,.special-line-h,.special-color,.special-missile,.special-bomb{
+  width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-weight:900;color:#fff;background:#2f3542;border:2px solid rgba(255,255,255,.9);
+  box-shadow:0 1px 4px rgba(0,0,0,.25);font-size:18px;line-height:1
+}
+.special-line-v::before{content:'↕'}
+.special-line-h::before{content:'↔'}
+.special-color::before{content:'✦'}
+.special-missile::before{content:'🚀';font-size:17px}
+.special-bomb::before{content:'●';font-size:21px}
+.duck-baby-art,.duck-mom-art{
+  width:34px;height:34px;display:block;position:relative;z-index:5;
+  background-repeat:no-repeat;background-position:center;background-size:contain;
+}
+.duck-baby-art{
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><ellipse cx='50' cy='66' rx='30' ry='20' fill='%23ffd84d'/><circle cx='66' cy='42' r='20' fill='%23ffe76d'/><circle cx='72' cy='38' r='3.5' fill='%23222'/><path d='M82 45 L98 51 L82 57 Z' fill='%23f59e0b'/><ellipse cx='48' cy='82' rx='24' ry='5' fill='%235cbced' opacity='.55'/></svg>");
+}
+.duck-mom-art{
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><ellipse cx='48' cy='66' rx='34' ry='22' fill='%23f5f7fa' stroke='%23c7d2df' stroke-width='3'/><circle cx='68' cy='38' r='22' fill='%23ffffff' stroke='%23c7d2df' stroke-width='3'/><circle cx='75' cy='34' r='4' fill='%23222'/><path d='M86 42 L100 49 L86 56 Z' fill='%23f59e0b'/><ellipse cx='48' cy='84' rx='27' ry='5' fill='%235cbced' opacity='.55'/></svg>");
+}
+.cell.has-duck{box-shadow:inset 0 0 0 3px #f59e0b}
+.draft-body{outline:4px solid #7c3aed;outline-offset:-3px;background:#ede9fe!important}
+.custom-path{box-shadow:inset 0 0 0 3px #38bdf8}
+.custom-body{background:radial-gradient(circle at center,#fff 0 12%,#b9e5ff 13% 34%,#72c8f2 35% 62%,#2e93ca 63%)!important;color:#fff}
+.lotus-art{
+  width:28px;height:28px;display:block;margin:auto;position:relative;
+  background-repeat:no-repeat;background-position:center;background-size:contain;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><ellipse cx='50' cy='70' rx='18' ry='10' fill='%2378c26d'/><path d='M50 66 C40 54 40 40 50 28 C60 40 60 54 50 66Z' fill='%23f06292'/><path d='M32 62 C24 52 24 40 34 32 C42 40 42 54 32 62Z' fill='%23f48fb1'/><path d='M68 62 C58 54 58 40 66 32 C76 40 76 52 68 62Z' fill='%23f48fb1'/><path d='M42 68 C34 62 32 52 38 44 C46 50 48 60 42 68Z' fill='%23ec407a'/><path d='M58 68 C52 60 54 50 62 44 C68 52 66 62 58 68Z' fill='%23ec407a'/><circle cx='50' cy='58' r='6' fill='%23ffd54f'/></svg>");
+}
+.tool.active{outline:3px solid #111}
+#board{display:grid;gap:3px;background:white;padding:12px;border:1px solid #ddd;border-radius:12px;width:max-content}
+.cell{width:50px;height:50px;border:1px solid #cad2df;border-radius:7px;position:relative;display:flex;align-items:center;justify-content:center;font-weight:bold}
+.coord{position:absolute;left:3px;top:2px;font-size:8px;opacity:.4}
+.center{background:radial-gradient(circle,#fff 0 18%,#9fdbff 20% 40%,#55b8ef 42% 65%,#2388c6 67%);color:white}
+.ring{box-shadow:inset 0 0 0 3px #7fcaf1}
+.match{outline:4px solid #111;z-index:2}
+.swap-selected{outline:4px solid #2563eb;outline-offset:-2px;z-index:4}
+.highlight{outline:5px solid #111;outline-offset:-3px;z-index:3}
+.stage{padding:9px;border:1px solid #ddd;border-radius:8px;margin:7px 0;background:#fafafa}
+.stage.active{border-color:#3b82f6;box-shadow:0 0 0 2px #dbeafe}
+.small{font-size:12px;color:#666;line-height:1.5}
+.badge{padding:9px;border:1px solid #ddd;border-radius:8px}
+.log{font-family:monospace;font-size:12px;white-space:pre-wrap;background:#111827;color:#d1fae5;padding:10px;border-radius:8px;min-height:150px;max-height:260px;overflow:auto}
+</style>
+</head>
+<body>
+<div class="app">
+<aside>
+<h1>맵 에디터 V19</h1>
+<div class="small">타일과 분수를 직접 배치한 뒤 단계별 처리 결과를 확인합니다.</div>
+
+<h2>맵 크기</h2>
+<div class="row">
+<input id="rows" type="number" min="5" max="15" value="11">
+<input id="cols" type="number" min="5" max="15" value="9">
+<button id="resize">재생성</button>
+</div>
+
+<h2>타일</h2>
+<div class="palette">
+<div class="tool" data-t="red" style="background:#ff6b6b">빨강</div>
+<div class="tool" data-t="yellow" style="background:#ffd43b">노랑</div>
+<div class="tool" data-t="green" style="background:#69db7c">초록</div>
+<div class="tool" data-t="blue" style="background:#4dabf7">파랑</div>
+<div class="tool" data-t="purple" style="background:#b197fc">보라</div>
+<div class="tool" data-t="orange" style="background:#ffa94d">주황</div>
+<div class="tool active" data-t="empty" style="background:#edf1f7">빈칸</div>
+<div class="tool" data-t="special" style="background:#262b36;color:white">특수(수동)</div>
+<div class="tool lotus" data-t="lotus">연꽃</div>
+</div>
+
+<div class="small" style="margin-top:8px">
+<b>연꽃:</b> 분수 링 안에만 직접 배치할 수 있습니다. 랜덤 생성/상단 보급되지 않으며, 플레이어가 직접 교환할 수 없습니다. 분수 회전에는 따라가지만 중력으로는 내려가지 않습니다.
+</div>
+
+<h2>플레이어 이동</h2>
+<div class="row">
+<button id="swapMode">인접 타일 이동 모드</button>
+<button id="cancelSwap">선택 취소</button>
+</div>
+<div class="small">이동 모드에서 첫 타일과 상하좌우로 인접한 두 번째 타일을 차례로 클릭합니다. 매치가 없으면 원래 위치로 돌아가며, 중력 이후 새로 생긴 매치도 연쇄적으로 계속 처리됩니다.</div>
+
+<h2>강조 표시</h2>
+<div class="row">
+<button id="highlightMode">강조 테두리 모드</button>
+<button id="clearHighlights">강조 전체 해제</button>
+</div>
+<div class="small">강조 모드에서 타일을 클릭하면 굵은 테두리를 켜거나 끌 수 있습니다.</div>
+
+<h2>오리 오브젝트</h2>
+<div class="row">
+<button id="babyDuckTool">아기오리 배치</button>
+<button id="momDuckTool">엄마오리 배치</button>
+<button id="clearDucks">오리 전체 제거</button>
+</div>
+<div class="small">오리는 분수의 가장 바깥 물길 링에만 직접 배치합니다. 오리는 분수 회전 시 이동 판정을 받으며, 타일 제거 상황에서는 오리 바로 앞칸이 실제로 제거된 경우에만 중력보다 먼저 이동합니다. 둘 다 중력의 영향을 받지 않습니다.</div>
+
+<h2>자유형 분수</h2>
+<div class="row">
+<button id="customFountainMode">도형 그리기 모드</button>
+<button id="finishCustomFountain">도형 완성 / 물길 생성</button>
+</div>
+<div class="row">
+<button id="clearCustomDraft">도형 선택 초기화</button>
+<select id="customFountainDir">
+<option value="cw">시계 방향</option>
+<option value="ccw">반시계 방향</option>
+</select>
+</div>
+<div class="small">
+연결된 칸을 직접 선택해 분수 몸체를 만듭니다. 선택한 도형의 바깥을 1칸 두께로 둘러싸는 물길이 자동 생성됩니다.
+</div>
+
+<h2>사각형 분수</h2>
+<div class="row">
+<label>가로 <input id="fwidth" type="number" min="3" max="15" value="4"></label>
+<label>세로 <input id="fheight" type="number" min="3" max="15" value="4"></label>
+</div>
+<div class="row">
+<select id="fdir">
+<option value="cw">시계</option>
+<option value="ccw">반시계</option>
+</select>
+<button id="fmode">분수 배치 모드</button>
+</div>
+<div class="small">
+가로/세로를 각각 지정할 수 있습니다. 가장 바깥 1칸은 회전하는 물길이며, 내부 영역은 고정 분수 오브젝트입니다.
+</div>
+
+<h2>편집</h2>
+<div class="row">
+<button id="undoState">↶ 이전 상태 되돌리기</button>
+</div>
+<div class="small">중력 처리, 회전, 제거, 직접 배치 등 보드가 바뀌기 전 상태로 돌아갑니다.</div>
+<div class="row">
+<button id="random">랜덤 채우기</button>
+<button id="clear">초기화</button>
+</div>
+</aside>
+
+<main><div id="board"></div></main>
+
+<aside class="right">
+<h1>단계형 턴 처리</h1>
+
+<div id="s1" class="stage active"><b>1. 분수 회전</b><div class="small">설정 방향으로 링 타일 1칸 이동</div></div>
+<div class="row"><button id="rotate" class="primary">① 분수 회전</button><button id="undoRotate">회전 되돌리기</button></div>
+
+<div id="s2" class="stage"><b>2. 매치 판정</b><div class="small">가로/세로 3개 이상 표시</div></div>
+<button id="detect">② 매치 판정</button>
+
+<div id="s3" class="stage"><b>3. 제거 / 특수 생성</b><div class="small">2×2 또는 4개 이상 특수 조건이면 특수 아이템 1개를 남기고 나머지를 제거</div></div>
+<button id="remove" class="warn">③ 제거</button>
+
+<div id="s4" class="stage"><b>4. 중력 처리</b><div class="small">수직 낙하 → 수직 진입 불가 시 좌/우 대각선 낙하 → 상단 보급</div></div>
+<button id="gravity" class="ok">④ 중력/보급</button>
+
+<div class="row"><button id="auto">한 턴 자동 실행</button><button id="resetStep">단계 초기화</button></div><div class="row"><button id="duckStep">오리 이동만 실행</button></div>
+<div class="row"><button id="gravityNow" class="ok">빈칸만 중력 처리</button></div>
+<div class="small">직접 비워둔 빈칸도 이 버튼으로 즉시 중력/보급 처리할 수 있습니다.</div>
+
+<h2>현재 상태</h2>
+<div id="status" class="badge">분수 회전 대기</div>
+
+<h2>매치 결과</h2>
+<div id="matches" class="badge">검출된 매치 없음</div>
+
+<h2>분수 목록</h2>
+<div id="flist" class="small">없음</div>
+
+<h2>로그</h2>
+<div id="log" class="log">준비 완료.</div>
+
+<div class="small" style="margin-top:14px">
+<b>중력 규칙</b><br>
+• 분수 전용 보급 없음<br>
+• 아래 빈칸으로 기본 낙하<br>
+• 고정 오브젝트로 수직 진입이 막히면 대각선 낙하 허용<br>
+• 상단 빈칸은 새 타일 생성<br>
+• 연꽃은 분수 링 안에서만 직접 배치 가능<br>
+• 연꽃은 색 매치 판정 대상이 아니며 분수 회전에는 같이 이동<br>• 연꽃은 중력의 영향을 받지 않아 아래 칸이 비어도 내려가지 않음<br>• 수직 보급이 막힌 빈칸은 좌상단/우상단 타일이 미끄러지듯 대각선 진입<br>• 제거되는 타일 상하좌우의 연꽃도 함께 제거<br>
+• 2×2 동일 색 → 미사일 특수 생성<br>• ㄱ/T/십자형 5개 이상 → 폭탄 특수 생성<br>
+• 가로 4매치 → 세로줄 특수 생성<br>
+• 세로 4매치 → 가로줄 특수 생성<br>
+• 일자 5개 이상 → 색 제거 특수 생성<br>
+• 특수 생성 후 나머지 매치 타일 제거 → 중력 처리
+</div>
+</aside>
+</div>
+
+<script>
+const COLORS={red:'#ff6b6b',yellow:'#ffd43b',green:'#69db7c',blue:'#4dabf7',purple:'#b197fc',orange:'#ffa94d',empty:'#edf1f7',special:'#262b36',lotus:'#dff4e5'};
+const NORMAL=['red','yellow','green','blue','purple','orange'];
+let R=11,C=9,G=[],F=[],tool='empty',placing=false,highlightMode=false,swapMode=false,swapFirst=null,lastSwap=null,duckTool=null,ducks=[],customMode=false,customDraft=[],stage=0,turn=0,rotateUndo=null,undoStack=[],suppressCapture=false,matchGroups=[],lastRemovedCells=[];
+const B=document.getElementById('board'),L=document.getElementById('log');
+
+function lg(x){L.textContent+='\n'+x;L.scrollTop=L.scrollHeight}
+
+function captureState(label){
+  if(suppressCapture) return;
+  undoStack.push({
+    label:label||'이전 상태',
+    R,C,
+    grid:G.map(row=>row.map(cell=>({...cell}))),
+    fountains:F.map(f=>({...f})),
+    ducks:ducks.map(d=>({...d})),
+    stage,turn
+  });
+  if(undoStack.length>30) undoStack.shift();
+  updateUndoButton();
+}
+
+function updateUndoButton(){
+  const b=document.getElementById('undoState');
+  if(!b) return;
+  b.disabled=undoStack.length===0;
+  b.textContent=undoStack.length ? `↶ 이전 상태 되돌리기 (${undoStack.length})` : '↶ 이전 상태 되돌리기';
+}
+
+function undoState(){
+  if(!undoStack.length){
+    alert('되돌릴 이전 상태가 없습니다.');
+    return;
+  }
+  const s=undoStack.pop();
+  R=s.R; C=s.C;
+  G=s.grid.map(row=>row.map(cell=>({...cell})));
+  F=s.fountains.map(f=>({...f}));
+  ducks=(s.ducks||[]).map(d=>({...d}));
+  stage=s.stage; turn=s.turn;
+  rotateUndo=null;
+  document.getElementById('rows').value=R;
+  document.getElementById('cols').value=C;
+  clearMatch();
+  draw();
+  stepUI();
+  updateUndoButton();
+  lg(`[되돌리기] ${s.label} 실행 전 상태로 복원`);
+}
+function mk(){G=Array.from({length:R},()=>Array.from({length:C},()=>({type:'empty',match:false})));F=[];ducks=[];customDraft=[];customMode=false;stage=0;turn=0;rotateUndo=null;undoStack=[];draw();stepUI();updateUndoButton()}
+function cellKey(r,c){return `${r},${c}`}
+function hasCell(list,r,c){return Array.isArray(list)&&list.some(([rr,cc])=>rr===r&&cc===c)}
+function fAt(r,c){
+  return F.find(f=>{
+    if(f.type==='custom') return hasCell(f.body,r,c)||hasCell(f.path,r,c);
+    return r>=f.r&&r<f.r+f.h&&c>=f.c&&c<f.c+f.w;
+  })
+}
+function blocked(r,c){
+  const f=fAt(r,c);
+  if(!f)return false;
+  if(f.type==='custom')return hasCell(f.body,r,c);
+  return r>f.r&&r<f.r+f.h-1&&c>f.c&&c<f.c+f.w-1;
+}
+function ring(f){
+  if(f.type==='custom')return f.path.map(([r,c])=>[r,c]);
+  const a=[],r=f.r,c=f.c,h=f.h,w=f.w;
+  for(let x=c;x<c+w;x++)a.push([r,x]);
+  for(let y=r+1;y<r+h;y++)a.push([y,c+w-1]);
+  for(let x=c+w-2;x>=c;x--)a.push([r+h-1,x]);
+  for(let y=r+h-2;y>r;y--)a.push([y,c]);
+  return a
+}
+function clearMatch(){for(let r=0;r<R;r++)for(let c=0;c<C;c++)G[r][c].match=false;matchGroups=[]}
+
+function draw(){
+ B.style.gridTemplateColumns=`repeat(${C},50px)`;B.innerHTML='';
+ for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+  let d=document.createElement('div');d.className='cell';
+  let f=fAt(r,c),isB=blocked(r,c);
+  if(isB){d.classList.add('center');d.textContent='분수'}
+  else{
+    d.style.background=COLORS[G[r][c].type]||COLORS.empty;
+    if(G[r][c].type==='special'){d.style.color='white';d.textContent='★'}
+    if(G[r][c].type==='special_v'){
+      const s=document.createElement('span');s.className='special-line-v';d.appendChild(s);d.title='세로줄 제거 특수';
+    }
+    if(G[r][c].type==='special_h'){
+      const s=document.createElement('span');s.className='special-line-h';d.appendChild(s);d.title='가로줄 제거 특수';
+    }
+    if(G[r][c].type==='special_color'){
+      const s=document.createElement('span');s.className='special-color';d.appendChild(s);d.title='색 제거 특수';
+    }
+    if(G[r][c].type==='special_missile'){
+      const s=document.createElement('span');s.className='special-missile';d.appendChild(s);d.title='미사일 특수';
+    }
+    if(G[r][c].type==='special_bomb'){
+      const s=document.createElement('span');s.className='special-bomb';d.appendChild(s);d.title='폭탄 특수';
+    }
+    if(G[r][c].type==='lotus'){
+      d.title='연꽃 · 회전 가능 / 중력 고정';
+      const lotus=document.createElement('span');
+      lotus.className='lotus-art';
+      d.appendChild(lotus);
+    }
+  }
+  if(f&&!isB)d.classList.add('ring');
+  if(f&&f.type==='custom'&&!isB)d.classList.add('custom-path');
+  if(f&&f.type==='custom'&&isB)d.classList.add('custom-body');
+  if(customDraftHas(r,c))d.classList.add('draft-body');
+  if(G[r][c].match)d.classList.add('match');if(G[r][c].highlight)d.classList.add('highlight');if(swapFirst&&swapFirst[0]===r&&swapFirst[1]===c)d.classList.add('swap-selected');
+  const duck=ducks.find(x=>x.r===r&&x.c===c);
+  if(duck){
+    d.classList.add('has-duck');
+    const art=document.createElement('span');
+    art.className=duck.kind==='baby'?'duck-baby-art':'duck-mom-art';
+    art.title=duck.kind==='baby'?'아기오리':'엄마오리';
+    d.appendChild(art);
+  }
+  let q=document.createElement('span');q.className='coord';q.textContent=`${r+1},${c+1}`;d.appendChild(q);
+  d.onclick=()=>clickCell(r,c);B.appendChild(d)
+ }
+ document.getElementById('flist').innerHTML=F.length?F.map((f,i)=>f.type==='custom'
+  ?`분수 ${i+1}: 자유형 / 몸체 ${f.body.length}칸 / 물길 ${f.path.length}칸 / ${f.dir==='cw'?'시계':'반시계'}`
+  :`분수 ${i+1}: ${f.w}×${f.h} / ${f.dir==='cw'?'시계':'반시계'}`).join('<br>'):'없음'
+}
+
+
+
+
+function customDraftHas(r,c){return customDraft.some(([rr,cc])=>rr===r&&cc===c)}
+function orthAdjacentToDraft(r,c){return customDraft.some(([rr,cc])=>Math.abs(rr-r)+Math.abs(cc-c)===1)}
+function draftConnectedAfterRemoval(rr,cc){
+  const cells=customDraft.filter(([r,c])=>!(r===rr&&c===cc));
+  if(cells.length<=1)return true;
+  const seen=new Set([cellKey(cells[0][0],cells[0][1])]),stack=[cells[0]];
+  while(stack.length){
+    const [r,c]=stack.pop();
+    for(const [nr,nc] of cells){
+      const k=cellKey(nr,nc);
+      if(!seen.has(k)&&Math.abs(nr-r)+Math.abs(nc-c)===1){seen.add(k);stack.push([nr,nc])}
+    }
+  }
+  return seen.size===cells.length;
+}
+function buildCustomShell(body){
+  const bodySet=new Set(body.map(([r,c])=>cellKey(r,c)));
+  const shell=new Set();
+  for(const [r,c] of body){
+    for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+      if(dr===0&&dc===0)continue;
+      const nr=r+dr,nc=c+dc;
+      if(nr<0||nr>=R||nc<0||nc>=C)continue;
+      const k=cellKey(nr,nc);
+      if(!bodySet.has(k))shell.add(k);
+    }
+  }
+  return [...shell].map(k=>k.split(',').map(Number));
+}
+function orderShellPath(shell){
+  if(shell.length<=1)return shell.slice();
+  const remaining=shell.map(x=>[x[0],x[1]]);
+  remaining.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+  const ordered=[remaining.shift()];
+  while(remaining.length){
+    const last=ordered[ordered.length-1];
+    remaining.sort((a,b)=>{
+      const da=Math.max(Math.abs(a[0]-last[0]),Math.abs(a[1]-last[1]));
+      const db=Math.max(Math.abs(b[0]-last[0]),Math.abs(b[1]-last[1]));
+      return da-db||a[0]-b[0]||a[1]-b[1];
+    });
+    ordered.push(remaining.shift());
+  }
+  return ordered;
+}
+function customFountainOverlap(body,path){
+  for(const [r,c] of [...body,...path]){
+    if(fAt(r,c))return true;
+  }
+  return false;
+}
+function finishCustomFountain(){
+  if(!customDraft.length){alert('먼저 도형으로 사용할 칸을 선택하세요.');return}
+  const body=customDraft.map(([r,c])=>[r,c]);
+  const shell=buildCustomShell(body);
+  if(shell.length<3){alert('주변 물길을 만들 공간이 부족합니다.');return}
+  if(customFountainOverlap(body,shell)){alert('생성될 자유형 분수 영역이 기존 분수와 겹칩니다.');return}
+  if(ducks.some(d=>body.some(([r,c])=>r===d.r&&c===d.c))){alert('분수 몸체로 선택한 칸에 오리가 있습니다.');return}
+  const dir=document.getElementById('customFountainDir').value;
+  captureState('자유형 분수 생성');
+  for(const [r,c] of body)G[r][c]={type:'empty',match:false,highlight:!!G[r][c].highlight};
+  F.push({type:'custom',id:Date.now()+Math.random(),body,path:orderShellPath(shell),dir});
+  customDraft=[];customMode=false;
+  document.getElementById('customFountainMode').textContent='도형 그리기 모드';
+  draw();lg(`자유형 분수 생성 / 몸체 ${body.length}칸 / 물길 ${shell.length}칸`);
+}
+
+function duckAt(r,c){return ducks.find(d=>d.r===r&&d.c===c)||null}
+function nextRingCellForDuck(d){
+  const f=fAt(d.r,d.c);
+  if(!f||blocked(d.r,d.c))return null;
+  const a=ring(f),idx=a.findIndex(([r,c])=>r===d.r&&c===d.c);
+  if(idx<0)return null;
+  const step=f.dir==='cw'?1:-1;
+  return a[(idx+step+a.length)%a.length];
+}
+function placeDuck(kind,r,c){
+  if(!isFountainRingCell(r,c)){alert('오리는 분수 링 안에만 배치할 수 있습니다.');return}
+  if(duckAt(r,c)){alert('이미 오리가 있는 칸입니다.');return}
+  captureState(kind==='baby'?'아기오리 배치':'엄마오리 배치');
+  G[r][c]={type:'empty',match:false,highlight:!!G[r][c].highlight};
+  ducks.push({id:Date.now()+Math.random(),kind,r,c});
+  duckTool=null;
+  document.getElementById('babyDuckTool').textContent='아기오리 배치';
+  document.getElementById('momDuckTool').textContent='엄마오리 배치';
+  draw();
+}
+function moveDuckOneStep(d, occupied, requireEmpty){
+  const next=nextRingCellForDuck(d);
+  if(!next)return 0;
+  const [nr,nc]=next;
+  if(occupied.has(`${nr},${nc}`))return 0;
+  if(requireEmpty && G[nr][nc].type!=='empty')return 0;
+
+  // 오리 칸에는 타일이 존재할 수 없으므로 이동 목적지는 비어 있어야 한다.
+  if(G[nr][nc].type!=='empty')return 0;
+
+  occupied.delete(`${d.r},${d.c}`);
+  occupied.add(`${nr},${nc}`);
+  d.r=nr; d.c=nc;
+  return 1;
+}
+
+function moveDucksOnRotation(){
+  const occupied=new Set(ducks.map(d=>`${d.r},${d.c}`));
+  let baby=0,mom=0;
+
+  // 분수 회전 이벤트에서는 두 오리 모두 물길 방향으로 최대 1칸 이동 가능.
+  // 단, 오리 전용 칸 규칙 때문에 목적지가 비어 있을 때만 이동한다.
+  for(const d of ducks.filter(x=>x.kind==='mom')){
+    mom+=moveDuckOneStep(d,occupied,true);
+  }
+  for(const d of ducks.filter(x=>x.kind==='baby')){
+    baby+=moveDuckOneStep(d,occupied,true);
+  }
+
+  if(mom||baby) lg(`[분수 회전 오리 이동] 엄마 ${mom}칸 / 아기 ${baby}칸`);
+  return {baby,mom};
+}
+
+function moveDucksAfterRemoval(removedCells){
+  if(!removedCells || !removedCells.length)return {baby:0,mom:0};
+
+  const removed=new Set(removedCells.map(([r,c])=>`${r},${c}`));
+  const occupied=new Set(ducks.map(d=>`${d.r},${d.c}`));
+  let babyMoved=0,momMoved=0;
+
+  for(const d of ducks){
+    const first=nextRingCellForDuck(d);
+    if(!first)continue;
+
+    // 이번 제거에서 '바로 앞칸'이 실제로 제거된 경우에만 이동 트리거 발생.
+    if(!removed.has(`${first[0]},${first[1]}`))continue;
+
+    let moved=0;
+
+    // 앞쪽에 이번 제거로 이어진 연속 빈칸이 있다면 그 길이만큼 이동.
+    while(true){
+      const next=nextRingCellForDuck(d);
+      if(!next)break;
+      const [nr,nc]=next;
+
+      if(occupied.has(`${nr},${nc}`))break;
+      if(G[nr][nc].type!=='empty')break;
+
+      // 첫 칸 이후에도 이번 제거로 만들어진 빈칸이어야 계속 전진.
+      if(moved>0 && !removed.has(`${nr},${nc}`))break;
+
+      occupied.delete(`${d.r},${d.c}`);
+      occupied.add(`${nr},${nc}`);
+      d.r=nr; d.c=nc;
+      moved++;
+    }
+
+    if(d.kind==='baby')babyMoved+=moved;
+    else momMoved+=moved;
+  }
+
+  if(momMoved||babyMoved){
+    lg(`[앞칸 제거 오리 이동] 엄마 ${momMoved}칸 / 아기 ${babyMoved}칸`);
+  }
+  return {baby:babyMoved,mom:momMoved};
+}
+
+function moveDucks(){
+  // 수동 테스트 버튼용: 현재 앞쪽의 연속 빈칸만 확인.
+  const occupied=new Set(ducks.map(d=>`${d.r},${d.c}`));
+  let baby=0,mom=0;
+  for(const d of ducks){
+    let moved=0;
+    while(true){
+      const next=nextRingCellForDuck(d);
+      if(!next)break;
+      const [nr,nc]=next;
+      if(occupied.has(`${nr},${nc}`) || G[nr][nc].type!=='empty')break;
+      occupied.delete(`${d.r},${d.c}`);
+      occupied.add(`${nr},${nc}`);
+      d.r=nr;d.c=nc;moved++;
+    }
+    if(d.kind==='baby')baby+=moved;else mom+=moved;
+  }
+  if(mom||baby)lg(`[수동 오리 이동] 엄마 ${mom}칸 / 아기 ${baby}칸`);
+  return {baby,mom};
+}
+
+function isFountainRingCell(r,c){
+  const f=fAt(r,c);
+  return !!(f && !blocked(r,c));
+}
+
+function adjacent4(r1,c1,r2,c2){
+  return Math.abs(r1-r2)+Math.abs(c1-c2)===1;
+}
+
+function swappableType(t){
+  return NORMAL.includes(t) || ['special','special_v','special_h','special_color','special_missile','special_bomb'].includes(t);
+}
+
+function cancelSwapSelection(){
+  swapFirst=null;
+  draw();
+}
+
+function countMatchedCells(){
+  let n=0;
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++)if(G[r][c].match)n++;
+  return n;
+}
+
+
+function resolveSwapCascade(initialMatched){
+  let chain=0;
+  let matched=initialMatched;
+
+  suppressCapture=true;
+  while(matched>0){
+    chain++;
+    removeM();          // 첫 번째 연쇄는 lastSwap 위치를 우선 사용
+    lastSwap=null;      // 이후 연쇄는 플레이어 이동 우선 위치 규칙 해제
+    moveDucksAfterRemoval(lastRemovedCells); // 오리 바로 앞칸이 이번 제거로 비었을 때만 이동
+    gravity();
+    matched=detect();   // 새로 내려온 타일에서 다시 매치가 생기면 계속 처리
+  }
+  suppressCapture=false;
+
+  lastSwap=null;
+  clearMatch();
+  stage=0;
+  draw();
+  stepUI();
+  lg(`플레이어 이동 결과 처리 완료 / 연쇄 ${chain}회`);
+}
+
+function clickCell(r,c){
+ if(customMode){
+   if(fAt(r,c)){alert('기존 분수 위에는 자유형 도형을 그릴 수 없습니다.');return}
+   if(customDraftHas(r,c)){
+     if(!draftConnectedAfterRemoval(r,c)){alert('중간 칸을 제거하면 도형 연결이 끊어집니다.');return}
+     customDraft=customDraft.filter(([rr,cc])=>!(rr===r&&cc===c));draw();return
+   }
+   if(customDraft.length&&!orthAdjacentToDraft(r,c)){alert('상하좌우로 연결된 칸만 추가할 수 있습니다.');return}
+   customDraft.push([r,c]);draw();return
+ }
+ if(placing){placeF(r,c);return}
+ if(blocked(r,c))return;
+ if(duckTool){placeDuck(duckTool,r,c);return;}
+
+ if(duckAt(r,c)){
+   if(swapMode) lg('오리가 있는 칸은 타일 이동 대상으로 사용할 수 없습니다.');
+   else lg('오리가 있는 칸에는 타일을 배치할 수 없습니다.');
+   return;
+ }
+
+ if(swapMode){
+   if(!swappableType(G[r][c].type)){
+     lg('연꽃/빈칸은 플레이어 이동 대상으로 선택할 수 없습니다.');
+     return;
+   }
+
+   if(!swapFirst){
+     swapFirst=[r,c];
+     draw();
+     return;
+   }
+
+   const [r1,c1]=swapFirst;
+   if(r1===r&&c1===c){
+     swapFirst=null;
+     draw();
+     return;
+   }
+
+   if(!adjacent4(r1,c1,r,c)){
+     swapFirst=[r,c];
+     draw();
+     lg('상하좌우로 인접한 타일만 교환할 수 있습니다.');
+     return;
+   }
+
+   captureState('플레이어 타일 이동');
+   const a={...G[r1][c1]},b={...G[r][c]};
+   G[r1][c1]={...b,match:false};
+   G[r][c]={...a,match:false};
+   lastSwap={from:[r1,c1],to:[r,c]};
+   swapFirst=null;
+
+   const matched=detect();
+
+   if(matched===0){
+     G[r1][c1]=a;
+     G[r][c]=b;
+     lastSwap=null;
+     clearMatch();
+     stage=0;
+     draw();
+     stepUI();
+     lg('매치가 없어 이동이 취소되었습니다.');
+     return;
+   }
+
+   resolveSwapCascade(matched);
+   return;
+ }
+
+ if(highlightMode){
+   captureState('강조 표시 변경');
+   G[r][c].highlight=!G[r][c].highlight;
+   draw();
+   return;
+ }
+
+ if(tool==='lotus' && !isFountainRingCell(r,c)){
+   alert('연꽃은 분수의 가장 바깥 물길 링에만 배치할 수 있습니다.');
+   return;
+ }
+
+ captureState(tool==='lotus'?'연꽃 배치':'타일 직접 배치');
+ const keepHighlight=!!G[r][c].highlight;
+ const previous=G[r][c].type;
+ G[r][c]={type:tool,match:false,highlight:keepHighlight};
+ if(tool==='lotus'){
+   lg(`[수동 배치] (${r+1},${c+1}) ${previous==='empty'?'빈칸':previous} → 연꽃`);
+ }
+ stage=0;clearMatch();lastSwap=null;draw();stepUI()
+}
+function placeF(r,c){
+ let w=Math.max(3,Math.min(15,+document.getElementById('fwidth').value||4));
+ let h=Math.max(3,Math.min(15,+document.getElementById('fheight').value||4));
+ let dir=document.getElementById('fdir').value;
+
+ document.getElementById('fwidth').value=w;
+ document.getElementById('fheight').value=h;
+
+ if(r+h>R||c+w>C){
+   alert('분수가 맵 밖으로 나갑니다. 가로/세로 크기를 줄이거나 더 안쪽 칸을 선택하세요.');
+   return
+ }
+
+ if(F.some(f=>!(r+h<=f.r||f.r+f.h<=r||c+w<=f.c||f.c+f.w<=c))){
+   alert('다른 분수와 겹칩니다.');
+   return
+ }
+
+ if(ducks.some(d=>d.r>=r&&d.r<r+h&&d.c>=c&&d.c<c+w)){
+   alert('오리가 있는 영역에는 분수를 배치할 수 없습니다.');
+   return
+ }
+
+ captureState('분수 배치');
+ F.push({type:'rect',r,c,w,h,dir});
+
+ // 내부 고정 영역의 기존 타일 제거
+ for(let rr=r+1;rr<r+h-1;rr++){
+   for(let cc=c+1;cc<c+w-1;cc++){
+     G[rr][cc]={type:'empty',match:false,highlight:!!G[rr][cc].highlight};
+   }
+ }
+
+ placing=false;
+ document.getElementById('fmode').textContent='분수 배치 모드';
+ draw();
+ lg(`${w}×${h} 분수 배치`)
+}
+function rotateF(){
+ captureState('분수 회전');
+ clearMatch();
+ rotateUndo={
+   grid:G.map(row=>row.map(cell=>({...cell}))),
+   stage,
+   turn
+ };
+ F.forEach(f=>{
+  let a=ring(f),v=a.map(([r,c])=>({...G[r][c]})),s=f.dir==='cw'?1:-1;
+  a.forEach((_,i)=>{let j=(i+s+a.length)%a.length,[r,c]=a[j];G[r][c]={...v[i],match:false}})
+ });
+ turn++;moveDucksOnRotation();draw();lg(`[턴 ${turn}] ① 분수 회전 + 오리 이동 판정`);stage=1;stepUI()
+}
+function detect(){
+ clearMatch();
+ let set=new Set(),valid=t=>NORMAL.includes(t);
+ matchGroups=[];
+
+ for(let r=0;r<R;r++){
+   let c=0;
+   while(c<C){
+     if(blocked(r,c)){c++;continue}
+     let t=G[r][c].type,e=c+1;
+     while(e<C&&!blocked(r,e)&&G[r][e].type===t)e++;
+     if(valid(t)&&e-c>=3){
+       let cells=[];
+       for(let x=c;x<e;x++){set.add(`${r},${x}`);cells.push([r,x])}
+       matchGroups.push({dir:'h',type:t,cells,length:e-c});
+     }
+     c=e;
+   }
+ }
+
+ for(let c=0;c<C;c++){
+   let r=0;
+   while(r<R){
+     if(blocked(r,c)){r++;continue}
+     let t=G[r][c].type,e=r+1;
+     while(e<R&&!blocked(e,c)&&G[e][c].type===t)e++;
+     if(valid(t)&&e-r>=3){
+       let cells=[];
+       for(let y=r;y<e;y++){set.add(`${y},${c}`);cells.push([y,c])}
+       matchGroups.push({dir:'v',type:t,cells,length:e-r});
+     }
+     r=e;
+   }
+ }
+
+ // 2×2 동일 색 사각 매치
+ for(let r=0;r<R-1;r++){
+   for(let c=0;c<C-1;c++){
+     if(blocked(r,c)||blocked(r+1,c)||blocked(r,c+1)||blocked(r+1,c+1)) continue;
+     const t=G[r][c].type;
+     if(!valid(t)) continue;
+     if(
+       G[r][c+1].type===t &&
+       G[r+1][c].type===t &&
+       G[r+1][c+1].type===t
+     ){
+       const cells=[[r,c],[r,c+1],[r+1,c],[r+1,c+1]];
+       cells.forEach(([rr,cc])=>set.add(`${rr},${cc}`));
+       matchGroups.push({dir:'square',type:t,cells,length:4});
+     }
+   }
+ }
+
+ // ㄱ/T/십자 형태: 가로 3매치와 세로 3매치가 같은 칸에서 교차하면 폭탄 특수 판정.
+ const hGroups=matchGroups.filter(g=>g.dir==='h');
+ const vGroups=matchGroups.filter(g=>g.dir==='v');
+ for(const hg of hGroups){
+   for(const vg of vGroups){
+     if(hg.type!==vg.type)continue;
+     const overlap=hg.cells.find(([r,c])=>vg.cells.some(([rr,cc])=>rr===r&&cc===c));
+     if(!overlap)continue;
+
+     const unique=[];
+     const seen=new Set();
+     [...hg.cells,...vg.cells].forEach(([r,c])=>{
+       const k=`${r},${c}`;
+       if(!seen.has(k)){seen.add(k);unique.push([r,c])}
+     });
+
+     if(unique.length>=5){
+       unique.forEach(([r,c])=>set.add(`${r},${c}`));
+       matchGroups.push({dir:'bomb',type:hg.type,cells:unique,length:unique.length});
+     }
+   }
+ }
+
+ set.forEach(k=>{let [r,c]=k.split(',').map(Number);G[r][c].match=true});
+ let specialCount=matchGroups.filter(g=>g.length>=4).length;
+ document.getElementById('matches').textContent=set.size
+   ? `${set.size}개 칸 매치 / 특수 판정 ${specialCount}개`
+   : '검출된 매치 없음';
+ draw();
+ lg(`[턴 ${turn}] ② 매치 판정: ${set.size}칸 / 특수 ${specialCount}개`);
+ stage=2;rotateUndo=null;stepUI();
+ return set.size
+}
+function chooseSpecialCell(group){
+ if(lastSwap){
+   const candidates=[lastSwap.to,lastSwap.from];
+   for(const pos of candidates){
+     if(group.cells.some(([r,c])=>r===pos[0]&&c===pos[1])) return pos;
+   }
+ }
+ const idx=Math.floor((group.cells.length-1)/2);
+ return group.cells[idx];
+}
+function specialTypeFor(group){
+ if(group.dir==='bomb')return 'special_bomb';
+ if(group.dir==='square'&&group.length===4)return 'special_missile';
+ if((group.dir==='h'||group.dir==='v')&&group.length>=5)return 'special_color';
+ if(group.length===4&&group.dir==='h')return 'special_v';
+ if(group.length===4&&group.dir==='v')return 'special_h';
+ return null;
+}
+
+function collectAdjacentLotus(removalKeys){
+  const lotus=new Set();
+  const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+  for(const key of removalKeys){
+    const [r,c]=key.split(',').map(Number);
+    for(const [dr,dc] of dirs){
+      const nr=r+dr,nc=c+dc;
+      if(nr>=0&&nr<R&&nc>=0&&nc<C&&G[nr][nc].type==='lotus'){
+        lotus.add(`${nr},${nc}`);
+      }
+    }
+  }
+  return lotus;
+}
+
+function removeM(){
+ captureState('매치 타일 제거/특수 생성');
+
+ const spawnMap=new Map();
+ for(const group of matchGroups){
+   const st=specialTypeFor(group);
+   if(!st)continue;
+   const [r,c]=chooseSpecialCell(group);
+   const key=`${r},${c}`;
+   const priority={special_missile:1,special_v:2,special_h:2,special_bomb:3,special_color:4};
+   if(!spawnMap.has(key) || priority[st]>priority[spawnMap.get(key).type]){
+     spawnMap.set(key,{type:st,r,c});
+   }
+ }
+
+ const removalKeys=new Set();
+ for(let r=0;r<R;r++){
+   for(let c=0;c<C;c++){
+     if(G[r][c].match && !spawnMap.has(`${r},${c}`)){
+       removalKeys.add(`${r},${c}`);
+     }
+   }
+ }
+
+ // 매치로 제거되는 타일의 상하좌우에 붙은 연꽃도 함께 제거
+ const lotusKeys=collectAdjacentLotus(removalKeys);
+
+ let removed=0;
+ lastRemovedCells=[];
+ for(const key of removalKeys){
+   const [r,c]=key.split(',').map(Number);
+   const h=!!G[r][c].highlight;
+   G[r][c]={type:'empty',match:false,highlight:h};
+   lastRemovedCells.push([r,c]);
+   removed++;
+ }
+
+ for(const [key,data] of spawnMap.entries()){
+   const [r,c]=key.split(',').map(Number);
+   const h=!!G[r][c].highlight;
+   G[r][c]={type:data.type,match:false,highlight:h};
+ }
+
+ let lotusRemoved=0;
+ for(const key of lotusKeys){
+   const [r,c]=key.split(',').map(Number);
+   const h=!!G[r][c].highlight;
+   G[r][c]={type:'empty',match:false,highlight:h};
+   lastRemovedCells.push([r,c]);
+   lotusRemoved++;
+ }
+
+ const created=spawnMap.size;
+ matchGroups=[];
+ draw();
+ lg(`[턴 ${turn}] ③ 제거: ${removed}칸 / 특수 생성: ${created}개 / 인접 연꽃 제거: ${lotusRemoved}개`);
+ stage=3;stepUI()
+}
+function vfall(){
+ let m=false;
+ for(let r=R-2;r>=0;r--)for(let c=0;c<C;c++)if(
+   !blocked(r,c) &&
+   G[r][c].type!=='empty' &&
+   G[r][c].type!=='lotus' &&
+   !blocked(r+1,c) &&
+   !duckAt(r+1,c) &&
+   G[r+1][c].type==='empty'
+ ){
+  let dstH=!!G[r+1][c].highlight,srcH=!!G[r][c].highlight;
+  G[r+1][c]={type:G[r][c].type,match:false,highlight:dstH};
+  G[r][c]={type:'empty',match:false,highlight:srcH};m=true
+ }return m
+}
+function gravityObstacle(r,c){
+  return blocked(r,c) || G[r][c].type==='lotus';
+}
+
+function movableByGravity(r,c){
+  return r>=0&&r<R&&c>=0&&c<C &&
+         !blocked(r,c) &&
+         G[r][c].type!=='empty' &&
+         G[r][c].type!=='lotus';
+}
+
+function dfall(){
+ let m=false;
+
+ // 아래쪽 빈칸부터 처리한다.
+ // 수직 낙하가 가능한 타일이 바로 위에 있으면 수직 낙하를 우선하고,
+ // 위가 분수/연꽃으로 막혔거나 빈칸인 경우에는 좌상단/우상단에서 대각선 진입을 허용한다.
+ for(let r=R-1;r>=1;r--){
+   for(let c=0;c<C;c++){
+     if(blocked(r,c) || duckAt(r,c) || G[r][c].type!=='empty') continue;
+
+     const aboveR=r-1;
+
+     // 바로 위에 중력 이동 가능한 타일이 있으면 대각선보다 수직 낙하가 우선.
+     if(movableByGravity(aboveR,c)) continue;
+
+     // 위가 장애물(분수/연꽃) 또는 이미 빈칸이라면 대각선 후보를 찾는다.
+     const aboveBlocked = gravityObstacle(aboveR,c);
+     const aboveEmpty = !blocked(aboveR,c) && G[aboveR][c].type==='empty';
+     if(!aboveBlocked && !aboveEmpty) continue;
+
+     // 한쪽으로만 계속 치우치지 않도록 좌/우 우선순위를 번갈아 검사.
+     const dirs=((r+c)%2)?[-1,1]:[1,-1];
+
+     for(const dc of dirs){
+       const sc=c+dc;
+       if(sc<0 || sc>=C) continue;
+       if(!movableByGravity(aboveR,sc)) continue;
+
+       const dstH=!!G[r][c].highlight;
+       const srcH=!!G[aboveR][sc].highlight;
+
+       G[r][c]={
+         type:G[aboveR][sc].type,
+         match:false,
+         highlight:dstH
+       };
+       G[aboveR][sc]={
+         type:'empty',
+         match:false,
+         highlight:srcH
+       };
+
+       m=true;
+       break;
+     }
+   }
+ }
+ return m
+}
+function spawn(){let m=false;for(let c=0;c<C;c++)if(!blocked(0,c)&&!duckAt(0,c)&&G[0][c].type==='empty'){let h=!!G[0][c].highlight;
+      G[0][c]={type:NORMAL[Math.floor(Math.random()*NORMAL.length)],match:false,highlight:h};m=true}return m}
+function emptyCount(){let n=0;for(let r=0;r<R;r++)for(let c=0;c<C;c++)if(!blocked(r,c)&&!duckAt(r,c)&&G[r][c].type==='empty')n++;return n}
+
+function safeRandomTile(r,c){
+  let candidates=[...NORMAL];
+
+  // 왼쪽 2칸과 같은 색이면 해당 색 제외
+  if(c>=2 && !blocked(r,c-1) && !blocked(r,c-2)){
+    let a=G[r][c-1].type,b=G[r][c-2].type;
+    if(a===b && NORMAL.includes(a)) candidates=candidates.filter(x=>x!==a);
+  }
+
+  // 위쪽 2칸과 같은 색이면 해당 색 제외
+  if(r>=2 && !blocked(r-1,c) && !blocked(r-2,c)){
+    let a=G[r-1][c].type,b=G[r-2][c].type;
+    if(a===b && NORMAL.includes(a)) candidates=candidates.filter(x=>x!==a);
+  }
+
+  return candidates[Math.floor(Math.random()*candidates.length)];
+}
+function gravity(){
+ captureState('중력/보급 처리');
+ clearMatch();let guard=0;
+ while(emptyCount()&&guard++<500){
+  let changed=false;while(vfall())changed=true;
+  if(dfall()){changed=true;continue}
+  if(spawn()){changed=true;continue}
+  if(!changed)break
+ }
+ let left=emptyCount();draw();lg(`[턴 ${turn}] ④ 중력/보급 완료${left?` / 미충전 ${left}칸`:''}`);stage=4;stepUI()
+}
+function undoRotation(){
+ if(!rotateUndo){
+   alert('되돌릴 분수 회전이 없습니다.');
+   return;
+ }
+ G=rotateUndo.grid.map(row=>row.map(cell=>({...cell})));
+ stage=rotateUndo.stage;
+ turn=rotateUndo.turn;
+ rotateUndo=null;
+ clearMatch();
+ draw();
+ stepUI();
+ document.getElementById('matches').textContent='검출된 매치 없음';
+ lg('분수 회전을 되돌렸습니다.');
+}
+
+function stepUI(){
+ let labels=['분수 회전 대기','매치 판정 대기','제거 대기','중력/보급 대기','턴 처리 완료'];
+ document.getElementById('status').textContent=labels[stage];
+ for(let i=1;i<=4;i++)document.getElementById('s'+i).classList.toggle('active',stage===i-1);
+ document.getElementById('rotate').disabled=stage!==0;
+ document.getElementById('detect').disabled=stage!==1;
+ document.getElementById('remove').disabled=stage!==2;
+ document.getElementById('gravity').disabled=stage!==3;
+ document.getElementById('undoRotate').disabled=!rotateUndo
+}
+
+document.querySelectorAll('.tool').forEach(x=>x.onclick=()=>{document.querySelectorAll('.tool').forEach(y=>y.classList.remove('active'));x.classList.add('active');tool=x.dataset.t;placing=false;highlightMode=false;swapMode=false;swapFirst=null;duckTool=null;customMode=false;document.getElementById('highlightMode').textContent='강조 테두리 모드';document.getElementById('swapMode').textContent='인접 타일 이동 모드'});
+
+document.getElementById('highlightMode').onclick=()=>{
+  highlightMode=!highlightMode;
+  placing=false;swapMode=false;swapFirst=null;duckTool=null;
+  document.getElementById('swapMode').textContent='인접 타일 이동 모드';
+  document.getElementById('highlightMode').textContent=highlightMode?'강조 모드 ON':'강조 테두리 모드';
+};
+document.getElementById('clearHighlights').onclick=()=>{
+  captureState('강조 전체 해제');
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++)G[r][c].highlight=false;
+  draw();
+};
+document.getElementById('gravityNow').onclick=()=>{
+  captureState('빈칸만 중력 처리');
+  clearMatch();
+  let guard=0;
+  while(emptyCount()&&guard++<500){
+    let changed=false;
+    while(vfall())changed=true;
+    if(dfall()){changed=true;continue}
+    if(spawn()){changed=true;continue}
+    if(!changed)break;
+  }
+  let left=emptyCount();
+  draw();
+  lg(`[수동] 빈칸 중력/보급 처리 완료${left?` / 미충전 ${left}칸`:''}`);
+};
+
+document.getElementById('fmode').onclick=()=>{placing=!placing;highlightMode=false;swapMode=false;swapFirst=null;duckTool=null;customMode=false;document.getElementById('swapMode').textContent='인접 타일 이동 모드';document.getElementById('fmode').textContent=placing?'좌상단 칸 선택':'분수 배치 모드'};
+document.getElementById('resize').onclick=()=>{R=+document.getElementById('rows').value;C=+document.getElementById('cols').value;mk()};
+document.getElementById('random').onclick=()=>{captureState('랜덤 채우기');
+  for(let r=0;r<R;r++){
+    for(let c=0;c<C;c++){
+      if(blocked(r,c)) continue;
+      let h=!!G[r][c].highlight;
+      G[r][c]={type:safeRandomTile(r,c),match:false,highlight:h};
+    }
+  }
+  clearMatch();
+  stage=0;
+  document.getElementById('matches').textContent='초기 매치 없음';
+  draw();
+  stepUI();
+  lg('3매치가 발생하지 않도록 랜덤 타일을 채웠습니다.');
+};
+document.getElementById('clear').onclick=()=>{if(confirm('전체 초기화할까요?'))mk()};
+document.getElementById('customFountainMode').onclick=()=>{
+  customMode=!customMode;placing=false;highlightMode=false;swapMode=false;swapFirst=null;duckTool=null;
+  document.getElementById('customFountainMode').textContent=customMode?'도형 그리기 모드 ON':'도형 그리기 모드';draw();
+};
+document.getElementById('finishCustomFountain').onclick=finishCustomFountain;
+document.getElementById('clearCustomDraft').onclick=()=>{
+  customDraft=[];customMode=false;document.getElementById('customFountainMode').textContent='도형 그리기 모드';draw();
+};
+document.getElementById('babyDuckTool').onclick=()=>{
+  duckTool=duckTool==='baby'?null:'baby';placing=false;highlightMode=false;swapMode=false;swapFirst=null;
+  document.getElementById('babyDuckTool').textContent=duckTool==='baby'?'아기오리 배치 ON':'아기오리 배치';
+  document.getElementById('momDuckTool').textContent='엄마오리 배치';draw();
+};
+document.getElementById('momDuckTool').onclick=()=>{
+  duckTool=duckTool==='mom'?null:'mom';placing=false;highlightMode=false;swapMode=false;swapFirst=null;
+  document.getElementById('momDuckTool').textContent=duckTool==='mom'?'엄마오리 배치 ON':'엄마오리 배치';
+  document.getElementById('babyDuckTool').textContent='아기오리 배치';draw();
+};
+document.getElementById('clearDucks').onclick=()=>{
+  if(!ducks.length)return;captureState('오리 전체 제거');ducks=[];duckTool=null;draw();
+};
+document.getElementById('duckStep').onclick=()=>{captureState('오리 이동');moveDucks();draw();};
+document.getElementById('swapMode').onclick=()=>{
+  swapMode=!swapMode;
+  swapFirst=null;
+  placing=false;highlightMode=false;duckTool=null;
+  document.getElementById('highlightMode').textContent='강조 테두리 모드';
+  document.getElementById('swapMode').textContent=swapMode?'인접 타일 이동 모드 ON':'인접 타일 이동 모드';
+  draw();
+};
+document.getElementById('cancelSwap').onclick=()=>{swapFirst=null;draw();};
+document.getElementById('undoState').onclick=undoState;
+document.getElementById('rotate').onclick=rotateF;
+document.getElementById('undoRotate').onclick=undoRotation;
+document.getElementById('detect').onclick=detect;
+document.getElementById('remove').onclick=removeM;
+document.getElementById('gravity').onclick=gravity;
+document.getElementById('resetStep').onclick=()=>{captureState('단계 초기화');stage=0;clearMatch();draw();stepUI();lg('단계 초기화')};
+document.getElementById('auto').onclick=()=>{
+  if(stage!==0){alert('단계 초기화 후 실행하세요.');return}
+  captureState('한 턴 자동 실행');
+  suppressCapture=true;
+  rotateF();detect();removeM();gravity();
+  suppressCapture=false;
+  updateUndoButton();
+};
+mk();updateUndoButton();
+</script>
+</body>
+</html>
